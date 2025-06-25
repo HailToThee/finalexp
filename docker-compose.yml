@@ -1,0 +1,35 @@
+services:
+  app:
+    build:
+      context: backend
+    image: modelsafety-backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+    depends_on:
+      - db
+    env_file:
+      - backend/.env
+  db:
+    image: postgres:13
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: modelsafety_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+  frontend:
+    build:
+      context: frontend
+    image: modelsafety-frontend
+    ports:
+      - "5173:5173"
+    # volumes:
+      # - ./frontend:/app
+    depends_on:
+      - app
+    command: npm run dev -- --host 0.0.0.0
+
+volumes:
+  postgres_data:
