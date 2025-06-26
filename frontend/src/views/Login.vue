@@ -13,28 +13,37 @@
                 </div>
                 <button type="submit" class="w-full bg-blue-500 text-white py-2 rounded-md hover:bg-blue-600">Login</button>
             </form>
+            <p v-if="error">{{ error }}</p>
         </div>
     </div>
 </template>
 <script>
-import { useAuthStore } from '../store/auth'
+import axios from 'axios'
+import { useStore } from 'vuex'
+import { useRouter } from 'vue-router'
+
 export default {
-    data() {
-        return {
-            username: '',
-            password: '',
+    setup() {
+        const store = useStore()
+        const router = useRouter()
+        const username = ref('')
+        const password = ref('')
+        const error = ref('')
+
+        const handleLogin = async () => {
+            try {
+                const res = await axios.post('/api/auth/login', {
+                    username: username.value,
+                    password: password.value
+                })
+                store.commit('setToken', res.data.access_token)
+                axios.defaults.headers.common['Authorization'] = `Bearer ${res.data.access_token}`
+                router.push('/dashboard')
+            } catch (e) {
+                error.value = '用户名或密码错误'
+            }
         }
-    },
-    methods: {
-        async handleLogin() {
-            const store = useAuthStore()
-            const success = await store.login(this.username, this.password)
-            if (success) {
-                this.$router.push('/dashboard')
-            } else {
-                alert('Login failed')
-            }
-            }
-        },
+        return { username, password, handleLogin, error }
     }
+}
 </script>

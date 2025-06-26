@@ -1,0 +1,263 @@
+# AI算法任务配置文件
+# 基于任务书要求的参数配置
+
+# 对抗攻击算法配置
+attack_algorithms:
+  # FGSM配置
+  FGSM:
+    epsilon: 0.03  # 扰动强度（微小输入扰动）
+    description: "Fast Gradient Sign Method - 基础白盒攻击算法"
+    supported_models: ["CNN", "ResNet50", "VGG16"]
+    
+  # PGD配置
+  PGD:
+    epsilon: 0.3  # 扰动上限（L∞约束）
+    alpha: 0.01  # 每步步长
+    iters: 40  # 迭代次数（多次迭代生成对抗样本）
+    description: "Projected Gradient Descent - 迭代式强对抗样本生成算法"
+    
+  # C&W配置
+  C&W:
+    c: 1e-4  # 置信度参数
+    kappa: 0  # 置信度阈值
+    iters: 1000  # 优化迭代次数
+    lr: 0.01  # 学习率
+    targeted: false  # 是否为目标攻击
+    description: "Carlini & Wagner - 经典攻击算法，支持目标导向攻击"
+    
+  # DAG配置
+  DAG:
+    iters: 10  # 迭代次数
+    alpha: 0.01  # 步长
+    description: "Detection-Aware Generation - 目标检测攻击算法"
+    supported_models: ["YOLOv5", "SSD", "FasterRCNN"]
+    
+  # UPC配置
+  UPC:
+    iters: 10  # 迭代次数
+    alpha: 0.01  # 步长
+    perturbation_limit: 0.3  # 扰动限制
+    description: "Universal Physical Camouflage - 物理世界攻击"
+    
+  # TextFooler配置
+  TextFooler:
+    similarity_threshold: 0.8  # 词向量相似度阈值
+    max_perturbations: 3  # 最大替换词数
+    description: "通过语义保留的同义词替换生成对抗文本"
+    
+  # BERT-Attack配置
+  BERT-Attack:
+    max_perturbations: 3  # 最大扰动数量
+    mask_prob: 0.15  # 掩码概率
+    description: "针对BERT等预训练模型的上下文感知攻击算法"
+
+# 训练配置
+training:
+  # 学习率配置（任务书示例：0.001~0.1）
+  learning_rate:
+    default: 0.001
+    range: [0.001, 0.1]
+    
+  # 批次大小配置（任务书示例：16、32、64）
+  batch_size:
+    default: 32
+    options: [16, 32, 64]
+    
+  # 最大迭代次数（任务书示例：600）
+  max_epochs:
+    default: 600
+    range: [100, 1000]
+    
+  # 工作进程数（任务书示例：4）
+  workers:
+    default: 4
+    options: [2, 4, 8]
+    
+  # 超参数优化配置
+  hyperopt:
+    # 搜索空间（任务书示例：BATCH_SIZE=[16,32], WORKERS=[2,4]）
+    param_space:
+      BATCH_SIZE: [16, 32]
+      WORKERS: [2, 4]
+      LEARNING_RATE: [0.001, 0.01]
+      MAX_EPOCHS: [300, 600]
+    
+    # 搜索方法
+    search_methods: ["optuna", "grid", "random"]
+    default_method: "optuna"
+    n_trials: 20
+
+# 评估指标配置
+evaluation:
+  # 攻击成功率（ASR）
+  attack_success_rate:
+    description: "对抗样本导致模型错误输出的比例"
+    threshold: 0.8  # 高攻击成功率阈值
+    
+  # 扰动幅度
+  perturbation_magnitude:
+    l2_threshold: 0.1  # L2范数阈值
+    linf_threshold: 0.05  # L∞范数阈值
+    
+  # 鲁棒精度
+  robust_accuracy:
+    description: "模型在对抗样本输入下的准确率"
+    threshold: 0.5  # 鲁棒性阈值
+    
+  # 对抗精度差距
+  adversarial_gap:
+    description: "干净样本精度与对抗样本精度的差值"
+    threshold: 0.3  # 可接受差距阈值
+    
+  # 迁移攻击成功率（TASR）
+  transfer_attack_success_rate:
+    description: "对抗样本在不同模型间的攻击效果"
+    threshold: 0.6  # 迁移攻击阈值
+
+# 模型管理配置
+model_management:
+  # 支持格式
+  supported_formats:
+    - "pytorch"  # .pth
+    - "tensorflow"  # .h5
+    - "mindspore"  # .ckpt
+    - "onnx"  # .onnx
+    
+  # ONNX配置
+  onnx:
+    opset_version: 11
+    export_params: true
+    do_constant_folding: true
+    
+  # 版本控制
+  version_control:
+    auto_version: true
+    timestamp_format: "%Y%m%d_%H%M%S"
+    
+  # 模型信息记录
+  metadata_fields:
+    - "training_config"
+    - "evaluation_results"
+    - "model_architecture"
+    - "dataset_info"
+
+# 推理服务配置
+inference:
+  # 批处理配置
+  batch_size:
+    default: 32
+    max: 128
+    
+  # 设备配置
+  devices:
+    - "cpu"
+    - "cuda"
+    - "npu"
+    
+  # 预热配置
+  warmup:
+    enabled: true
+    num_warmup: 10
+    
+  # 性能监控
+  monitoring:
+    inference_time: true
+    memory_usage: true
+    throughput: true
+
+# 数据增强配置
+data_augmentation:
+  # 图像增强方法（任务书提及的7种方法）
+  image:
+    - "horizontal_flip"  # 水平翻转
+    - "vertical_flip"  # 垂直翻转
+    - "rotation"  # 旋转
+    - "gaussian_blur"  # 高斯模糊
+    - "color_jitter"  # 颜色抖动
+    - "random_crop"  # 随机裁剪
+    - "random_erasing"  # 随机擦除
+    
+  # 文本增强方法
+  text:
+    - "synonym_replacement"  # 同义词替换
+    - "random_insertion"  # 随机插入
+    - "random_deletion"  # 随机删除
+    - "random_swap"  # 随机交换
+    - "back_translation"  # 回译
+
+# 样本库配置
+sample_library:
+  # 支持的数据类型
+  data_types:
+    - "image"
+    - "text"
+    - "audio"
+    
+  # 样本类别
+  categories:
+    - "clean"  # 干净样本
+    - "adversarial"  # 对抗样本
+    - "augmented"  # 增强样本
+    
+  # 版本管理
+  versioning:
+    enabled: true
+    auto_backup: true
+    
+  # 元数据字段
+  metadata_fields:
+    - "source"
+    - "creation_time"
+    - "augmentation_method"
+    - "attack_parameters"
+
+# API配置
+api:
+  # 支持的框架
+  frameworks:
+    - "pytorch"
+    - "tensorflow"
+    - "mindspore"
+    - "onnx"
+    
+  # 请求限制
+  rate_limit:
+    requests_per_minute: 100
+    max_batch_size: 100
+    
+  # 响应格式
+  response_format:
+    include_metadata: true
+    include_timing: true
+    include_confidence: true
+
+# 日志配置
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file: "ai_algorithm.log"
+  
+  # TensorBoard配置
+  tensorboard:
+    enabled: true
+    log_dir: "./logs"
+    update_freq: 100  # 每100步更新一次
+
+# 分布式训练配置
+distributed:
+  # Kubernetes支持
+  kubernetes:
+    enabled: false
+    namespace: "ai-training"
+    
+  # GPU/NPU配置
+  gpu:
+    enabled: true
+    memory_limit: "10GB"  # 任务书示例中的显存配置
+    
+  # 多节点配置
+  multi_node:
+    enabled: false
+    nodes: 1
+    master_addr: "localhost"
+    master_port: 29500 

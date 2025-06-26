@@ -7,6 +7,7 @@ services:
       - "8000:8000"
     volumes:
       - ./backend:/app
+      - /var/run/docker.sock:/var/run/docker.sock # <--- 关键的修正！
     depends_on:
       - db
     env_file:
@@ -25,8 +26,8 @@ services:
     image: modelsafety-frontend
     ports:
       - "5173:5173"
-    # volumes:
-      # - ./frontend:/app
+    volumes:
+      - ./frontend:/app # 如果前端也需要实时文件同步，可以取消注释
     depends_on:
       - app
     command: npm run dev -- --host 0.0.0.0
