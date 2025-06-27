@@ -28,6 +28,7 @@ services:
       - "5173:5173"
     volumes:
       - ./frontend:/app # 如果前端也需要实时文件同步，可以取消注释
+      - /app/node_modules
     depends_on:
       - app
     command: npm run dev -- --host 0.0.0.0

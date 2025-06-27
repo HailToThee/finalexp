@@ -1,115 +1,69 @@
 <template>
-  <div class="p-6 font-sans text-gray-800 max-w-4xl mx-auto">
-    <h1 class="text-3xl font-bold mb-6 text-center">AI 模型安全性评估平台</h1>
-
-    <section class="mb-8">
-      <h2 class="text-xl font-semibold mb-2">1. 用户登录 / 注册</h2>
-      <input v-model="username" placeholder="用户名" class="border px-2 py-1 mr-2" />
-      <input v-model="password" placeholder="密码" type="password" class="border px-2 py-1 mr-2" />
-      <button @click="login" class="bg-blue-500 text-white px-4 py-1 rounded">登录</button>
-      <button @click="register" class="bg-gray-500 text-white px-4 py-1 rounded ml-2">注册</button>
-      <div class="text-green-600 mt-2" v-if="authMessage">{{ authMessage }}</div>
-    </section>
-
-    <section class="mb-8">
-      <h2 class="text-xl font-semibold mb-2">2. 样本上传</h2>
-      <input type="file" @change="uploadSample" class="mb-2" />
-      <div v-if="uploadResult" class="text-green-600">{{ uploadResult }}</div>
-    </section>
-
-    <section class="mb-8">
-      <h2 class="text-xl font-semibold mb-2">3. 模型列表</h2>
-      <ul class="list-disc list-inside">
-        <li v-for="model in modelList" :key="model">{{ model }}</li>
-      </ul>
-    </section>
-
-    <section class="mb-8">
-      <h2 class="text-xl font-semibold mb-2">4. 模型评估</h2>
-      <input v-model="modelToEvaluate" placeholder="模型名" class="border px-2 py-1 mr-2" />
-      <button @click="evaluateModel" class="bg-purple-600 text-white px-4 py-1 rounded">开始评估</button>
-      <div v-if="evaluationResult" class="mt-2 bg-gray-100 p-3">
-        <div>准确率: {{ evaluationResult.accuracy }}</div>
-        <div>鲁棒性: {{ evaluationResult.robustness }}</div>
-        <div>攻击成功率: {{ evaluationResult.asr }}</div>
+  <div class="min-h-screen bg-gray-100">
+    <!-- 顶部导航条 -->
+    <header class="w-full h-16 bg-gradient-to-r from-blue-900 to-blue-600 flex items-center px-8 shadow z-10">
+      <div class="text-2xl font-bold text-white tracking-widest flex items-center">
+        <span class="mr-3 w-8 h-8 bg-white bg-opacity-20 rounded-full flex items-center justify-center text-blue-200">🧬</span>
+        AI模型安全评估平台
       </div>
-    </section>
-
-    <section>
-      <h2 class="text-xl font-semibold mb-2">5. 对抗样本攻击任务</h2>
-      <button @click="runAttack" class="bg-red-500 text-white px-4 py-1 rounded">启动 FGSM 攻击</button>
-      <div v-if="attackResult" class="mt-2 text-blue-600">{{ attackResult }}</div>
-    </section>
+      <div class="flex-1"></div>
+      <!-- 右侧可预留用户信息/设置等 -->
+    </header>
+    <div class="flex">
+      <!-- 侧边栏 -->
+      <aside class="w-64 min-h-[calc(100vh-4rem)] bg-gradient-to-b from-blue-800 to-blue-700 shadow-lg flex-shrink-0 pt-8">
+        <nav class="px-4">
+          <div class="mb-6 text-blue-200 text-xs tracking-widest pl-2">功能导航</div>
+          <ul class="space-y-4">
+            <li>
+              <router-link to="/dashboard" class="block py-3 px-6 rounded-xl text-lg font-medium transition hover:bg-blue-600 hover:text-white text-blue-100" active-class="bg-white text-blue-800 font-bold shadow">首页</router-link>
+            </li>
+            <li>
+              <router-link to="/users" class="block py-3 px-6 rounded-xl text-lg font-medium transition hover:bg-blue-600 hover:text-white text-blue-100" active-class="bg-white text-blue-800 font-bold shadow">用户管理</router-link>
+            </li>
+            <li>
+              <router-link to="/models" class="block py-3 px-6 rounded-xl text-lg font-medium transition hover:bg-blue-600 hover:text-white text-blue-100" active-class="bg-white text-blue-800 font-bold shadow">模型管理</router-link>
+            </li>
+            <li>
+              <router-link to="/algorithms" class="block py-3 px-6 rounded-xl text-lg font-medium transition hover:bg-blue-600 hover:text-white text-blue-100" active-class="bg-white text-blue-800 font-bold shadow">算法管理</router-link>
+            </li>
+            <li>
+              <router-link to="/file" class="block py-3 px-6 rounded-xl text-lg font-medium transition hover:bg-blue-600 hover:text-white text-blue-100" active-class="bg-white text-blue-800 font-bold shadow">文件管理</router-link>
+            </li>
+            <li>
+              <router-link to="/samples" class="block py-3 px-6 rounded-xl text-lg font-medium transition hover:bg-blue-600 hover:text-white text-blue-100" active-class="bg-white text-blue-800 font-bold shadow">样本库</router-link>
+            </li>
+            <li>
+              <router-link to="/inference" class="block py-3 px-6 rounded-xl text-lg font-medium transition hover:bg-blue-600 hover:text-white text-blue-100" active-class="bg-white text-blue-800 font-bold shadow">推理服务</router-link>
+            </li>
+          </ul>
+        </nav>
+      </aside>
+      <!-- 主内容区 -->
+      <main class="flex-1 min-h-[calc(100vh-4rem)] bg-gray-50">
+        <router-view />
+      </main>
+    </div>
   </div>
 </template>
-
 <script setup>
-import axios from 'axios'
-import { ref, onMounted } from 'vue'
-
-const username = ref('')
-const password = ref('')
-const authMessage = ref('')
-const uploadResult = ref('')
-const modelList = ref([])
-const modelToEvaluate = ref('')
-const evaluationResult = ref(null)
-const attackResult = ref('')
-
-const login = async () => {
-  const form = new FormData()
-  form.append('username', username.value)
-  form.append('password', password.value)
-  const res = await axios.post('/api/auth/login', form)
-  localStorage.setItem('token', res.data.access_token)
-  authMessage.value = `欢迎 ${username.value}`
-}
-
-const register = async () => {
-  const res = await axios.post('/api/auth/register', {
-    username: username.value,
-    password: password.value,
-  })
-  authMessage.value = res.data.msg
-}
-
-const uploadSample = async (event) => {
-  const file = event.target.files[0]
-  const formData = new FormData()
-  formData.append('file', file)
-  const res = await axios.post('/api/sample/upload', formData)
-  uploadResult.value = res.data.message
-}
-
-const evaluateModel = async () => {
-  const token = localStorage.getItem('token')
-  const res = await axios.post('/api/model/evaluate', { model_name: modelToEvaluate.value }, {
-    headers: { token }
-  })
-  evaluationResult.value = res.data
-}
-
-const runAttack = async () => {
-  const token = localStorage.getItem('token')
-  const res = await axios.post('/api/attack/fgsm', {
-    model_path: modelToEvaluate.value,
-    sample_path: '示例路径.png',
-    epsilon: 0.1
-  }, {
-    headers: { token }
-  })
-  attackResult.value = res.data.msg
-}
-
-onMounted(async () => {
-  const res = await axios.get('/api/model/list')
-  modelList.value = res.data.models
+import { ref, computed } from 'vue'
+import { useRouter } from 'vue-router'
+const router = useRouter()
+const token = ref(localStorage.getItem('token'))
+const username = computed(() => {
+  // 可根据后端返回的用户信息调整
+  return token.value ? '已登录' : ''
 })
+function logout() {
+  localStorage.removeItem('token')
+  token.value = null
+  router.push('/login')
+}
 </script>
-
-<style scoped>
-body {
-  font-family: sans-serif;
-  background: #f9f9f9;
+<style>
+.router-link-exact-active {
+  text-decoration: underline;
+  font-weight: bold;
 }
 </style>
