@@ -116,8 +116,9 @@
   </div>
 </template>
 <script setup>
-import { ref, computed } from 'vue'
-// 假数据：样本分组树
+import { ref, computed, onMounted } from 'vue'
+import axios from 'axios'
+// 样本分组树结构可本地静态
 const sampleGroups = ref([
   { id: 1, name: '全部样本', children: [
     { id: 2, name: '文本样本' },
@@ -126,12 +127,7 @@ const sampleGroups = ref([
   ]}
 ])
 const selectedGroup = ref(1)
-// 假数据：样本列表
-const allSamples = ref([
-  { id: 1, name: '文本1', type: '文本', uploader: '张三', uploadedAt: '2024-06-01T09:00' },
-  { id: 2, name: '图片1', type: '图片', uploader: '李四', uploadedAt: '2024-06-02T11:20' },
-  { id: 3, name: '音频1', type: '音频', uploader: '王五', uploadedAt: '2024-06-03T14:30' },
-])
+const allSamples = ref([])
 const searchName = ref('')
 const searchUploader = ref('')
 const searchType = ref('')
@@ -142,6 +138,20 @@ const showEditForm = ref(false)
 const showDeleteConfirm = ref(false)
 const deleteTarget = ref(null)
 const form = ref({ id: null, name: '', type: '', uploader: '', uploadedAt: '' })
+const fileInput = ref(null)
+
+// 获取样本列表
+async function fetchSamples() {
+  try {
+    const res = await axios.get('/api/sample/list')
+    allSamples.value = res.data.samples || []
+  } catch (e) {
+    allSamples.value = []
+  }
+}
+onMounted(() => {
+  fetchSamples()
+})
 const filteredSamples = computed(() => {
   return allSamples.value.filter(s => {
     return (
@@ -175,28 +185,50 @@ function closeForm() {
   showEditForm.value = false
   form.value = { id: null, name: '', type: '', uploader: '', uploadedAt: '' }
 }
+// 上传样本
+async function handleFileChange(e) {
+  const fileList = e.target.files
+  if (fileList.length > 0) {
+    const file = fileList[0]
+    const formData = new FormData()
+    formData.append('file', file)
+    try {
+      await axios.post('/api/sample/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      })
+      await fetchSamples()
+      alert('上传成功')
+    } catch (err) {
+      alert('上传失败')
+    }
+  }
+}
+// 删除样本
+async function deleteSampleConfirm() {
+  if (!deleteTarget.value) return
+  try {
+    await axios.delete(`/api/sample/${deleteTarget.value.id}`)
+    await fetchSamples()
+    showDeleteConfirm.value = false
+    deleteTarget.value = null
+  } catch (err) {
+    alert('删除失败')
+  }
+}
+function confirmDelete(sample) {
+  deleteTarget.value = sample
+  showDeleteConfirm.value = true
+}
 function addSample() {
-  const newId = allSamples.value.length ? Math.max(...allSamples.value.map(s => s.id)) + 1 : 1
-  allSamples.value.push({ ...form.value, id: newId })
-  closeForm()
+  fileInput.value.click()
 }
 function editSample(sample) {
   form.value = { ...sample }
   showEditForm.value = true
 }
 function updateSample() {
-  const idx = allSamples.value.findIndex(s => s.id === form.value.id)
-  if (idx !== -1) allSamples.value[idx] = { ...form.value }
+  // 可扩展：实现样本信息编辑接口
   closeForm()
-}
-function confirmDelete(sample) {
-  deleteTarget.value = sample
-  showDeleteConfirm.value = true
-}
-function deleteSampleConfirm() {
-  allSamples.value.splice(allSamples.value.findIndex(s => s.id === deleteTarget.value.id), 1)
-  showDeleteConfirm.value = false
-  deleteTarget.value = null
 }
 function showDetail(sample) {
   alert('样本详情：' + sample.name)

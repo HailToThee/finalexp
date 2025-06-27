@@ -146,13 +146,9 @@
   </div>
 </template>
 <script setup>
-import { ref, computed } from 'vue'
-// 假数据
-const allUsers = ref([
-  { id: 1, nickname: 'admin', username: '管理员', department: '长沙分点', phone: '18812606277', status: '启用', createdAt: '2024-12-05T17:03' },
-  { id: 2, nickname: 'dxy', username: 'xy', department: '市场部门', phone: '15601691311', status: '启用', createdAt: '2024-12-07T09:07' },
-  { id: 3, nickname: 'test', username: '测试号1', department: '运营部门', phone: '15601691222', status: '禁用', createdAt: '2024-11-21T02:13' },
-])
+import { ref, computed, onMounted } from 'vue'
+import axios from 'axios'
+const allUsers = ref([])
 const orgSearch = ref('')
 const selectedOrg = ref('')
 const searchNickname = ref('')
@@ -167,6 +163,18 @@ const showDeleteConfirm = ref(false)
 const deleteTarget = ref(null)
 const form = ref({ id: null, nickname: '', username: '', department: '', phone: '', status: '启用', createdAt: '' })
 
+// 获取用户列表
+async function fetchUsers() {
+  try {
+    const res = await axios.get('/api/user/list')
+    allUsers.value = res.data.users || []
+  } catch (e) {
+    allUsers.value = []
+  }
+}
+onMounted(() => {
+  fetchUsers()
+})
 const filteredUsers = computed(() => {
   return allUsers.value.filter(u => {
     return (
@@ -203,27 +211,48 @@ function closeForm() {
   showEditForm.value = false
   form.value = { id: null, nickname: '', username: '', department: '', phone: '', status: '启用', createdAt: '' }
 }
-function addUser() {
-  const newId = allUsers.value.length ? Math.max(...allUsers.value.map(u => u.id)) + 1 : 1
-  allUsers.value.push({ ...form.value, id: newId })
-  closeForm()
+// 新增用户
+async function addUser() {
+  try {
+    await axios.post('/api/user/create', form.value)
+    await fetchUsers()
+    showAddForm.value = false
+    closeForm()
+    alert('新增用户成功')
+  } catch (err) {
+    alert('新增用户失败')
+  }
+}
+// 编辑用户
+async function updateUser() {
+  try {
+    await axios.put(`/api/user/${form.value.id}`, form.value)
+    await fetchUsers()
+    showEditForm.value = false
+    closeForm()
+    alert('编辑用户成功')
+  } catch (err) {
+    alert('编辑用户失败')
+  }
 }
 function editUser(user) {
   form.value = { ...user }
   showEditForm.value = true
 }
-function updateUser() {
-  const idx = allUsers.value.findIndex(u => u.id === form.value.id)
-  if (idx !== -1) allUsers.value[idx] = { ...form.value }
-  closeForm()
+// 删除用户
+async function deleteUser() {
+  if (!deleteTarget.value) return
+  try {
+    await axios.delete(`/api/user/${deleteTarget.value.id}`)
+    await fetchUsers()
+    showDeleteConfirm.value = false
+    deleteTarget.value = null
+  } catch (err) {
+    alert('删除失败')
+  }
 }
 function confirmDelete(user) {
   deleteTarget.value = user
   showDeleteConfirm.value = true
-}
-function deleteUser() {
-  allUsers.value.splice(allUsers.value.findIndex(u => u.id === deleteTarget.value.id), 1)
-  showDeleteConfirm.value = false
-  deleteTarget.value = null
 }
 </script> 

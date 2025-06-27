@@ -104,12 +104,10 @@
     </div>
 </template>
 <script setup>
-import { ref, computed } from 'vue'
-const allModels = ref([
-    // 示例数据，后续可对接后端API
-    { id: 1, name: 'ResNet50', uploader: '张三', uploadedAt: '2024-06-01T10:00', status: '已部署' },
-    { id: 2, name: 'BERT-Base', uploader: '李四', uploadedAt: '2024-06-02T14:30', status: '未部署' },
-])
+import { ref, computed, onMounted } from 'vue'
+import axios from 'axios'
+
+const allModels = ref([])
 const searchName = ref('')
 const searchUploader = ref('')
 const searchDate = ref('')
@@ -120,6 +118,22 @@ const showEditForm = ref(false)
 const showDeleteConfirm = ref(false)
 const deleteTarget = ref(null)
 const form = ref({ id: null, name: '', uploader: '', uploadedAt: '', status: '已部署' })
+const fileInput = ref(null)
+
+// 获取模型列表
+async function fetchModels() {
+    try {
+        const res = await axios.get('/api/model/list')
+        allModels.value = res.data.models || []
+    } catch (e) {
+        allModels.value = []
+    }
+}
+
+onMounted(() => {
+    fetchModels()
+})
+
 const filteredModels = computed(() => {
     return allModels.value.filter(m => {
         return (
@@ -148,38 +162,52 @@ function closeForm() {
     showEditForm.value = false
     form.value = { id: null, name: '', uploader: '', uploadedAt: '', status: '已部署' }
 }
+// 上传模型
+async function handleFileChange(e) {
+    const fileList = e.target.files
+    if (fileList.length > 0) {
+        const file = fileList[0]
+        const formData = new FormData()
+        formData.append('file', file)
+        try {
+            await axios.post('/api/model/upload', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            })
+            await fetchModels()
+            alert('上传成功')
+        } catch (err) {
+            alert('上传失败')
+        }
+    }
+}
+// 删除模型
+async function deleteModelConfirm() {
+    if (!deleteTarget.value) return
+    try {
+        await axios.delete(`/api/model/${deleteTarget.value.id}`)
+        await fetchModels()
+        showDeleteConfirm.value = false
+        deleteTarget.value = null
+    } catch (err) {
+        alert('删除失败')
+    }
+}
+function confirmDelete(model) {
+    deleteTarget.value = model
+    showDeleteConfirm.value = true
+}
 function addModel() {
-    const newId = allModels.value.length ? Math.max(...allModels.value.map(m => m.id)) + 1 : 1
-    allModels.value.push({ ...form.value, id: newId })
-    closeForm()
+    fileInput.value.click()
 }
 function editModel(model) {
     form.value = { ...model }
     showEditForm.value = true
 }
 function updateModel() {
-    const idx = allModels.value.findIndex(m => m.id === form.value.id)
-    if (idx !== -1) allModels.value[idx] = { ...form.value }
+    // 可扩展：实现模型信息编辑接口
     closeForm()
-}
-function confirmDelete(model) {
-    deleteTarget.value = model
-    showDeleteConfirm.value = true
-}
-function deleteModelConfirm() {
-    allModels.value.splice(allModels.value.findIndex(m => m.id === deleteTarget.value.id), 1)
-    showDeleteConfirm.value = false
-    deleteTarget.value = null
 }
 function showDetail(model) {
     alert('模型详情：' + model.name)
-}
-const fileInput = ref(null)
-function handleFileChange(e) {
-    const file = e.target.files[0]
-    if (file) {
-        // 这里可添加上传逻辑
-        alert('模拟上传: ' + file.name)
-    }
 }
 </script>

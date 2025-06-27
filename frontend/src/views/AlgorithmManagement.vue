@@ -104,19 +104,10 @@
   </div>
 </template>
 <script setup>
-import { ref, computed } from 'vue'
-const allAlgorithms = ref([
-  { id: 1, name: 'FGSM', uploader: '张三', uploadedAt: '2024-06-01T12:00', status: '已部署' },
-  { id: 2, name: 'TextFooler', uploader: '李四', uploadedAt: '2024-06-02T15:10', status: '未部署' },
-  { id: 3, name: 'BIM', uploader: '王五', uploadedAt: '2024-06-03T10:20', status: '已部署' },
-  { id: 4, name: 'CW', uploader: '赵六', uploadedAt: '2024-06-04T09:30', status: '未部署' },
-  { id: 5, name: 'DAG', uploader: '小明', uploadedAt: '2024-06-05T11:00', status: '已部署' },
-  { id: 6, name: 'DeepFool', uploader: '小红', uploadedAt: '2024-06-06T14:00', status: '未部署' },
-  { id: 7, name: 'DeepWordBug', uploader: '小刚', uploadedAt: '2024-06-07T16:00', status: '已部署' },
-  { id: 8, name: 'PGD', uploader: '小李', uploadedAt: '2024-06-08T13:00', status: '未部署' },
-  { id: 9, name: 'UPC', uploader: '小王', uploadedAt: '2024-06-09T17:00', status: '已部署' },
-  { id: 10, name: 'BertAttack', uploader: '小赵', uploadedAt: '2024-06-10T18:00', status: '未部署' },
-])
+import { ref, computed, onMounted } from 'vue'
+import axios from 'axios'
+
+const allAlgorithms = ref([])
 const searchName = ref('')
 const searchUploader = ref('')
 const searchDate = ref('')
@@ -127,65 +118,96 @@ const showEditForm = ref(false)
 const showDeleteConfirm = ref(false)
 const deleteTarget = ref(null)
 const form = ref({ id: null, name: '', uploader: '', uploadedAt: '', status: '已部署' })
+const fileInput = ref(null)
+
+// 获取算法列表
+async function fetchAlgorithms() {
+    try {
+        const res = await axios.get('/api/algorithm/list')
+        allAlgorithms.value = res.data.algorithms || []
+    } catch (e) {
+        allAlgorithms.value = []
+    }
+}
+
+onMounted(() => {
+    fetchAlgorithms()
+})
+
 const filteredAlgorithms = computed(() => {
-  return allAlgorithms.value.filter(a => {
-    return (
-      (!searchName.value || a.name.includes(searchName.value)) &&
-      (!searchUploader.value || a.uploader.includes(searchUploader.value)) &&
-      (!searchDate.value || a.uploadedAt.startsWith(searchDate.value))
-    )
-  })
+    return allAlgorithms.value.filter(a => {
+        return (
+            (!searchName.value || a.name.includes(searchName.value)) &&
+            (!searchUploader.value || a.uploader.includes(searchUploader.value)) &&
+            (!searchDate.value || a.uploadedAt.startsWith(searchDate.value))
+        )
+    })
 })
 const maxPage = computed(() => Math.max(1, Math.ceil(filteredAlgorithms.value.length / pageSize)))
 const pagedAlgorithms = computed(() => {
-  const start = (page.value - 1) * pageSize
-  return filteredAlgorithms.value.slice(start, start + pageSize)
+    const start = (page.value - 1) * pageSize
+    return filteredAlgorithms.value.slice(start, start + pageSize)
 })
 function filterAlgorithms() {
-  page.value = 1
+    page.value = 1
 }
 function resetFilters() {
-  searchName.value = ''
-  searchUploader.value = ''
-  searchDate.value = ''
-  page.value = 1
+    searchName.value = ''
+    searchUploader.value = ''
+    searchDate.value = ''
+    page.value = 1
 }
 function closeForm() {
-  showAddForm.value = false
-  showEditForm.value = false
-  form.value = { id: null, name: '', uploader: '', uploadedAt: '', status: '已部署' }
+    showAddForm.value = false
+    showEditForm.value = false
+    form.value = { id: null, name: '', uploader: '', uploadedAt: '', status: '已部署' }
 }
-function addAlgorithm() {
-  const newId = allAlgorithms.value.length ? Math.max(...allAlgorithms.value.map(a => a.id)) + 1 : 1
-  allAlgorithms.value.push({ ...form.value, id: newId })
-  closeForm()
+// 上传算法
+async function handleFileChange(e) {
+    const fileList = e.target.files
+    if (fileList.length > 0) {
+        const file = fileList[0]
+        const formData = new FormData()
+        formData.append('file', file)
+        try {
+            await axios.post('/api/algorithm/upload', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            })
+            await fetchAlgorithms()
+            alert('上传成功')
+        } catch (err) {
+            alert('上传失败')
+        }
+    }
 }
-function editAlgorithm(algo) {
-  form.value = { ...algo }
-  showEditForm.value = true
-}
-function updateAlgorithm() {
-  const idx = allAlgorithms.value.findIndex(a => a.id === form.value.id)
-  if (idx !== -1) allAlgorithms.value[idx] = { ...form.value }
-  closeForm()
+// 删除算法
+async function deleteAlgorithmConfirm() {
+    if (!deleteTarget.value) return
+    try {
+        await axios.delete(`/api/algorithm/${deleteTarget.value.id}`)
+        await fetchAlgorithms()
+        showDeleteConfirm.value = false
+        deleteTarget.value = null
+    } catch (err) {
+        alert('删除失败')
+    }
 }
 function confirmDelete(algo) {
-  deleteTarget.value = algo
-  showDeleteConfirm.value = true
+    deleteTarget.value = algo
+    showDeleteConfirm.value = true
 }
-function deleteAlgorithmConfirm() {
-  allAlgorithms.value.splice(allAlgorithms.value.findIndex(a => a.id === deleteTarget.value.id), 1)
-  showDeleteConfirm.value = false
-  deleteTarget.value = null
+function addAlgorithm() {
+    fileInput.value.click()
+}
+function editAlgorithm(algo) {
+    form.value = { ...algo }
+    showEditForm.value = true
+}
+function updateAlgorithm() {
+    // 可扩展：实现算法信息编辑接口
+    closeForm()
 }
 function showDetail(algo) {
-  alert('算法详情：' + algo.name)
-}
-const fileInput = ref(null)
-function handleFileChange(e) {
-  const file = e.target.files[0]
-  if (file) {
-    alert('模拟上传: ' + file.name)
-  }
+    alert('算法详情：' + algo.name)
 }
 </script> 

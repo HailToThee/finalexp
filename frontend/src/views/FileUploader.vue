@@ -93,11 +93,10 @@
     </div>
 </template>
 <script setup>
-import { ref, computed } from 'vue'
-const allFiles = ref([
-    { id: 1, name: 'train.csv', uploader: '张三', uploadedAt: '2024-06-01T09:00' },
-    { id: 2, name: 'test.csv', uploader: '李四', uploadedAt: '2024-06-02T11:20' },
-])
+import { ref, computed, onMounted } from 'vue'
+import axios from 'axios'
+
+const allFiles = ref([])
 const searchName = ref('')
 const searchUploader = ref('')
 const searchDate = ref('')
@@ -108,6 +107,22 @@ const showEditForm = ref(false)
 const showDeleteConfirm = ref(false)
 const deleteTarget = ref(null)
 const form = ref({ id: null, name: '', uploader: '', uploadedAt: '' })
+const fileInput = ref(null)
+
+// 获取文件列表
+async function fetchFiles() {
+    try {
+        const res = await axios.get('/api/file/list')
+        allFiles.value = res.data.files || []
+    } catch (e) {
+        allFiles.value = []
+    }
+}
+
+onMounted(() => {
+    fetchFiles()
+})
+
 const filteredFiles = computed(() => {
     return allFiles.value.filter(f => {
         return (
@@ -136,40 +151,67 @@ function closeForm() {
     showEditForm.value = false
     form.value = { id: null, name: '', uploader: '', uploadedAt: '' }
 }
+// 上传文件
+async function handleFileChange(e) {
+    const fileList = e.target.files
+    if (fileList.length > 0) {
+        const file = fileList[0]
+        const formData = new FormData()
+        formData.append('file', file)
+        try {
+            await axios.post('/api/file/upload', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            })
+            await fetchFiles()
+            alert('上传成功')
+        } catch (err) {
+            alert('上传失败')
+        }
+    }
+}
+// 删除文件
+async function deleteFileConfirm() {
+    if (!deleteTarget.value) return
+    try {
+        await axios.delete(`/api/file/${deleteTarget.value.id}`)
+        await fetchFiles()
+        showDeleteConfirm.value = false
+        deleteTarget.value = null
+    } catch (err) {
+        alert('删除失败')
+    }
+}
+function confirmDelete(file) {
+    deleteTarget.value = file
+    showDeleteConfirm.value = true
+}
+// 下载文件
+async function downloadFile(file) {
+    try {
+        const res = await axios.get(`/api/file/download/${file.id}`, { responseType: 'blob' })
+        const url = window.URL.createObjectURL(new Blob([res.data]))
+        const link = document.createElement('a')
+        link.href = url
+        link.setAttribute('download', file.name)
+        document.body.appendChild(link)
+        link.click()
+        link.remove()
+    } catch (err) {
+        alert('下载失败')
+    }
+}
 function addFile() {
-    const newId = allFiles.value.length ? Math.max(...allFiles.value.map(f => f.id)) + 1 : 1
-    allFiles.value.push({ ...form.value, id: newId })
-    closeForm()
+    fileInput.value.click()
 }
 function editFile(file) {
     form.value = { ...file }
     showEditForm.value = true
 }
 function updateFile() {
-    const idx = allFiles.value.findIndex(f => f.id === form.value.id)
-    if (idx !== -1) allFiles.value[idx] = { ...form.value }
+    // 可扩展：实现文件信息编辑接口
     closeForm()
-}
-function confirmDelete(file) {
-    deleteTarget.value = file
-    showDeleteConfirm.value = true
-}
-function deleteFileConfirm() {
-    allFiles.value.splice(allFiles.value.findIndex(f => f.id === deleteTarget.value.id), 1)
-    showDeleteConfirm.value = false
-    deleteTarget.value = null
 }
 function showDetail(file) {
     alert('文件详情：' + file.name)
-}
-function downloadFile(file) {
-    alert('模拟下载：' + file.name)
-}
-const fileInput = ref(null)
-function handleFileChange(e) {
-    const fileList = e.target.files
-    if (fileList.length > 0) {
-        alert('模拟上传: ' + Array.from(fileList).map(f => f.name).join(', '))
-    }
 }
 </script>

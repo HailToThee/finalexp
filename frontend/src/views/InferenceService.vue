@@ -133,8 +133,9 @@
   </div>
 </template>
 <script setup>
-import { ref, computed } from 'vue'
-// 假数据：服务分组树
+import { ref, computed, onMounted } from 'vue'
+import axios from 'axios'
+// 服务分组树结构可本地静态
 const serviceGroups = ref([
   { id: 1, name: '全部服务', children: [
     { id: 2, name: '文本推理' },
@@ -143,12 +144,7 @@ const serviceGroups = ref([
   ]}
 ])
 const selectedGroup = ref(1)
-// 假数据：推理服务列表
-const allServices = ref([
-  { id: 1, name: '文本情感分析', type: '文本', status: '运行中', creator: '张三', createdAt: '2024-06-01T09:00' },
-  { id: 2, name: '图片分类', type: '图片', status: '已停止', creator: '李四', createdAt: '2024-06-02T11:20' },
-  { id: 3, name: '语音识别', type: '音频', status: '运行中', creator: '王五', createdAt: '2024-06-03T14:30' },
-])
+const allServices = ref([])
 const searchName = ref('')
 const searchCreator = ref('')
 const searchType = ref('')
@@ -160,6 +156,19 @@ const showEditForm = ref(false)
 const showDeleteConfirm = ref(false)
 const deleteTarget = ref(null)
 const form = ref({ id: null, name: '', type: '', status: '', creator: '', createdAt: '' })
+
+// 获取服务列表
+async function fetchServices() {
+  try {
+    const res = await axios.get('/api/inference/list')
+    allServices.value = res.data.services || []
+  } catch (e) {
+    allServices.value = []
+  }
+}
+onMounted(() => {
+  fetchServices()
+})
 const filteredServices = computed(() => {
   return allServices.value.filter(s => {
     return (
@@ -195,28 +204,42 @@ function closeForm() {
   showEditForm.value = false
   form.value = { id: null, name: '', type: '', status: '', creator: '', createdAt: '' }
 }
-function addService() {
-  const newId = allServices.value.length ? Math.max(...allServices.value.map(s => s.id)) + 1 : 1
-  allServices.value.push({ ...form.value, id: newId })
-  closeForm()
+// 新建服务
+async function addService() {
+  // 这里只做简单示例，实际可根据表单内容构造请求体
+  try {
+    await axios.post('/api/inference/deploy', form.value)
+    await fetchServices()
+    showAddForm.value = false
+    closeForm()
+    alert('新建服务成功')
+  } catch (err) {
+    alert('新建服务失败')
+  }
+}
+// 删除服务
+async function deleteServiceConfirm() {
+  if (!deleteTarget.value) return
+  try {
+    await axios.delete(`/api/inference/${deleteTarget.value.id}`)
+    await fetchServices()
+    showDeleteConfirm.value = false
+    deleteTarget.value = null
+  } catch (err) {
+    alert('删除失败')
+  }
+}
+function confirmDelete(service) {
+  deleteTarget.value = service
+  showDeleteConfirm.value = true
 }
 function editService(service) {
   form.value = { ...service }
   showEditForm.value = true
 }
 function updateService() {
-  const idx = allServices.value.findIndex(s => s.id === form.value.id)
-  if (idx !== -1) allServices.value[idx] = { ...form.value }
+  // 可扩展：实现服务信息编辑接口
   closeForm()
-}
-function confirmDelete(service) {
-  deleteTarget.value = service
-  showDeleteConfirm.value = true
-}
-function deleteServiceConfirm() {
-  allServices.value.splice(allServices.value.findIndex(s => s.id === deleteTarget.value.id), 1)
-  showDeleteConfirm.value = false
-  deleteTarget.value = null
 }
 function showDetail(service) {
   alert('服务详情：' + service.name)
