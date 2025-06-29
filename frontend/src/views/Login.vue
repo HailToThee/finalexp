@@ -73,7 +73,17 @@ async function handleRegister() {
     regLoading.value = true
     regMsg.value = ''
     regSuccess.value = false
-    const res = await store.register(regUsername.value, regPassword.value)
+    const res = await store.register(
+        regUsername.value, 
+        regPassword.value, 
+        regUsername.value, // nickname使用username
+        '', // department
+        '', // phone
+        '', // email
+        '', // gender
+        '', // position
+        '' // remark
+    )
     regLoading.value = false
     regMsg.value = res.msg
     regSuccess.value = res.success

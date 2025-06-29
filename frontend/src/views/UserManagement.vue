@@ -1,188 +1,209 @@
 <template>
-  <div class="flex gap-6 p-8 bg-gray-50 min-h-screen">
-    <!-- 左侧组织树 -->
-    <aside class="w-64 bg-white rounded-xl shadow p-4 flex-shrink-0">
-      <input type="text" v-model="orgSearch" placeholder="🔍 搜索组织/部门" class="w-full mb-4 px-3 py-2 border rounded focus:outline-none focus:ring" />
-      <div class="text-gray-700 text-sm font-bold mb-2">顶级组织</div>
-      <ul class="text-gray-600 text-sm space-y-1">
-        <li>
-          <span class="font-semibold cursor-pointer" :class="{ 'text-blue-600': selectedOrg==='武汉总部' }" @click="selectOrg('武汉总部')">武汉总部</span>
-          <ul class="ml-4 space-y-1">
-            <li :class="{ 'text-blue-600': selectedOrg==='武汉总部' }" class="cursor-pointer" @click="selectOrg('武汉总部')">武汉总部</li>
-            <li>
-              <span :class="{ 'text-blue-600': selectedOrg==='长沙分点' }" class="cursor-pointer" @click="selectOrg('长沙分点')">长沙分点</span>
-              <ul class="ml-4 space-y-1">
-                <li :class="{ 'text-blue-600': selectedOrg==='市场部门' }" class="cursor-pointer" @click="selectOrg('市场部门')">市场部门</li>
-                <li :class="{ 'text-blue-600': selectedOrg==='财务部门' }" class="cursor-pointer" @click="selectOrg('财务部门')">财务部门</li>
-              </ul>
-            </li>
-          </ul>
-        </li>
-        <li>
-          <span class="font-semibold cursor-pointer" :class="{ 'text-blue-600': selectedOrg==='新部门' }" @click="selectOrg('新部门')">新部门</span>
-          <ul class="ml-4 space-y-1">
-            <li :class="{ 'text-blue-600': selectedOrg==='测试部门' }" class="cursor-pointer" @click="selectOrg('测试部门')">测试部门</li>
-            <li :class="{ 'text-blue-600': selectedOrg==='测试2部门' }" class="cursor-pointer" @click="selectOrg('测试2部门')">测试2部门</li>
+  <div class="flex min-h-screen bg-gray-50">
+    <!-- 左侧部门树 -->
+    <div class="w-64 bg-white shadow-lg rounded-r-2xl p-6 mr-8 mt-8 h-fit">
+      <div class="font-bold text-lg mb-4">组织结构</div>
+      <ul>
+        <li v-for="org in orgTree" :key="org.id" class="mb-2">
+          <div class="font-semibold cursor-pointer" @click="selectOrg(org)">{{ org.name }}</div>
+          <ul v-if="org.children" class="ml-4 mt-1">
+            <li v-for="child in org.children" :key="child.id" class="cursor-pointer hover:text-blue-600" @click.stop="selectOrg(child)">{{ child.name }}</li>
           </ul>
         </li>
       </ul>
-    </aside>
-    <!-- 右侧主内容区 -->
-    <section class="flex-1">
-      <!-- 顶部筛选区 -->
-      <div class="bg-white rounded-xl shadow p-6 mb-6 flex flex-wrap gap-4 items-center">
-        <input type="text" v-model="searchNickname" placeholder="用户昵称" class="px-3 py-2 border rounded focus:outline-none focus:ring w-40" />
-        <input type="text" v-model="searchPhone" placeholder="手机号" class="px-3 py-2 border rounded focus:outline-none focus:ring w-40" />
-        <select v-model="searchStatus" class="px-3 py-2 border rounded focus:outline-none focus:ring w-40">
-          <option value="">用户状态</option>
-          <option value="启用">启用</option>
-          <option value="禁用">禁用</option>
-        </select>
-        <input type="date" v-model="searchDate" class="px-3 py-2 border rounded focus:outline-none focus:ring w-40" />
-        <button class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600" @click="filterUsers">查询</button>
-        <button class="bg-gray-200 text-gray-700 px-4 py-2 rounded hover:bg-gray-300" @click="resetFilters">重置</button>
-        <button class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 ml-auto" @click="showAddForm=true">+ 新增</button>
-      </div>
-      <!-- 用户表格 -->
-      <div class="bg-white rounded-xl shadow p-6">
-        <table class="min-w-full text-sm">
-          <thead class="bg-gray-100">
-            <tr>
-              <th class="py-2 px-4 border-b">用户编号</th>
-              <th class="py-2 px-4 border-b">用户昵称</th>
-              <th class="py-2 px-4 border-b">用户名称</th>
-              <th class="py-2 px-4 border-b">部门</th>
-              <th class="py-2 px-4 border-b">手机号</th>
-              <th class="py-2 px-4 border-b">状态</th>
-              <th class="py-2 px-4 border-b">创建时间</th>
-              <th class="py-2 px-4 border-b">操作</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="user in pagedUsers" :key="user.id" class="hover:bg-blue-50">
-              <td class="py-2 px-4 border-b">{{ user.id }}</td>
-              <td class="py-2 px-4 border-b">{{ user.nickname }}</td>
-              <td class="py-2 px-4 border-b">{{ user.username }}</td>
-              <td class="py-2 px-4 border-b">{{ user.department }}</td>
-              <td class="py-2 px-4 border-b">{{ user.phone }}</td>
-              <td class="py-2 px-4 border-b">
-                <span :class="user.status === '启用' ? 'text-green-600' : 'text-gray-400'">●</span> {{ user.status }}
-              </td>
-              <td class="py-2 px-4 border-b">{{ user.createdAt }}</td>
-              <td class="py-2 px-4 border-b space-x-2">
-                <button class="text-blue-500 hover:underline" @click="editUser(user)">编辑</button>
-                <button class="text-red-500 hover:underline" @click="confirmDelete(user)">删除</button>
-                <button class="text-gray-500 hover:underline">更多</button>
-              </td>
-            </tr>
-            <tr v-if="pagedUsers.length === 0">
-              <td colspan="8" class="text-center py-4 text-gray-400">暂无用户</td>
-            </tr>
-          </tbody>
-        </table>
-        <!-- 分页区 -->
-        <div class="flex justify-between items-center mt-4 text-sm">
-          <div>共 {{ filteredUsers.length }} 条</div>
-          <div class="space-x-2">
-            <button class="px-2" :disabled="page===1" @click="page--">上一页</button>
-            <span>{{ page }}</span>
-            <button class="px-2" :disabled="page===maxPage" @click="page++">下一页</button>
+    </div>
+    <!-- 主内容区 -->
+    <div class="flex-1 max-w-6xl mx-auto p-8">
+      <div class="bg-white rounded-xl shadow p-8">
+        <!-- 顶部筛选栏 -->
+        <div class="flex items-center mb-6 space-x-2">
+          <input v-model="searchNickname" type="text" placeholder="用户昵称" class="border rounded px-3 py-2 w-40" />
+          <input v-model="searchUsername" type="text" placeholder="用户名" class="border rounded px-3 py-2 w-32" />
+          <input v-model="searchPhone" type="text" placeholder="手机号" class="border rounded px-3 py-2 w-32" />
+          <select v-model="searchStatus" class="border rounded px-3 py-2 w-32">
+            <option value="">用户状态</option>
+            <option value="启用">启用</option>
+            <option value="禁用">禁用</option>
+          </select>
+          <select v-model="searchDepartment" class="border rounded px-3 py-2 w-32">
+            <option value="">全部部门</option>
+            <option v-for="d in departmentList" :key="d" :value="d">{{ d }}</option>
+          </select>
+          <button @click="filterUsers" class="bg-blue-500 text-white px-4 py-2 rounded">查询</button>
+          <button @click="resetFilters" class="bg-gray-200 text-gray-700 px-4 py-2 rounded">重置</button>
+          <button @click="showAddForm=true" class="bg-green-500 text-white px-4 py-2 rounded">+ 新增</button>
+        </div>
+        <!-- 用户表格 -->
+        <div class="bg-gray-50 rounded-lg shadow-inner p-4">
+          <table class="min-w-full text-sm">
+            <thead class="bg-gray-100">
+              <tr>
+                <th class="py-2 px-4 border-b">用户编号</th>
+                <th class="py-2 px-4 border-b">用户昵称</th>
+                <th class="py-2 px-4 border-b">用户名</th>
+                <th class="py-2 px-4 border-b">部门</th>
+                <th class="py-2 px-4 border-b">手机号</th>
+                <th class="py-2 px-4 border-b">状态</th>
+                <th class="py-2 px-4 border-b">创建时间</th>
+                <th class="py-2 px-4 border-b">操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="user in pagedUsers" :key="user.id" class="hover:bg-blue-50">
+                <td class="py-2 px-4 border-b">{{ user.id }}</td>
+                <td class="py-2 px-4 border-b">{{ user.nickname }}</td>
+                <td class="py-2 px-4 border-b">{{ user.username }}</td>
+                <td class="py-2 px-4 border-b">{{ user.department }}</td>
+                <td class="py-2 px-4 border-b">{{ user.phone }}</td>
+                <td class="py-2 px-4 border-b">
+                  <span :class="user.status==='启用' ? 'text-green-600' : 'text-gray-400'">{{ user.status }}</span>
+                </td>
+                <td class="py-2 px-4 border-b">{{ user.createdAt }}</td>
+                <td class="py-2 px-4 border-b space-x-2">
+                  <button class="text-blue-500 hover:underline" @click="editUser(user)">修改</button>
+                  <button class="text-red-500 hover:underline" @click="confirmDelete(user)">删除</button>
+                  <button class="text-gray-500 hover:underline" @click="showDetail(user)">更多</button>
+                </td>
+              </tr>
+              <tr v-if="pagedUsers.length === 0">
+                <td colspan="8" class="text-center py-4 text-gray-400">暂无用户</td>
+              </tr>
+            </tbody>
+          </table>
+          <!-- 分页 -->
+          <div class="flex justify-between items-center mt-4 text-sm">
+            <div>共 {{ filteredUsers.length }} 条</div>
+            <div class="space-x-2">
+              <button class="px-2" :disabled="page===1" @click="page--">上一页</button>
+              <span>{{ page }}</span>
+              <button class="px-2" :disabled="page===maxPage" @click="page++">下一页</button>
+            </div>
           </div>
         </div>
-      </div>
-      <!-- 新增/编辑弹窗表单 -->
-      <div v-if="showAddForm || showEditForm" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-30 z-50">
-        <div class="bg-white rounded-xl shadow-xl p-8 w-full max-w-xl relative">
-          <button class="absolute top-2 right-2 text-gray-400 hover:text-gray-600 text-2xl" @click="closeForm">×</button>
-          <h2 class="text-2xl font-bold mb-6 text-center">{{ showAddForm ? '新增用户' : '编辑用户' }}</h2>
-          <form @submit.prevent="showAddForm ? addUser() : updateUser()">
-            <div class="grid grid-cols-2 gap-4 mb-4">
-              <div>
-                <label class="block text-gray-600 mb-1">用户昵称</label>
-                <input v-model="form.nickname" type="text" class="w-full px-3 py-2 border rounded" required />
+        <!-- 新增/编辑弹窗表单 -->
+        <div v-if="showAddForm || showEditForm" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-30 z-50">
+          <div class="bg-white rounded-xl shadow-xl p-8 w-full max-w-2xl relative">
+            <button class="absolute top-2 right-2 text-gray-400 hover:text-gray-600 text-2xl" @click="closeForm">×</button>
+            <h2 class="text-2xl font-bold mb-6 text-center">{{ showAddForm ? '新增用户' : '编辑用户' }}</h2>
+            <form @submit.prevent="showAddForm ? addUserData() : updateUserData()">
+              <div class="grid grid-cols-2 gap-4 mb-4">
+                <div>
+                  <label class="block text-gray-600 mb-1">用户昵称</label>
+                  <input v-model="form.nickname" type="text" class="w-full px-3 py-2 border rounded" required />
+                </div>
+                <div>
+                  <label class="block text-gray-600 mb-1">用户名</label>
+                  <input v-model="form.username" type="text" class="w-full px-3 py-2 border rounded" required />
+                </div>
+                <div>
+                  <label class="block text-gray-600 mb-1">用户密码</label>
+                  <input v-model="form.password" type="password" class="w-full px-3 py-2 border rounded" :required="showAddForm" />
+                </div>
+                <div>
+                  <label class="block text-gray-600 mb-1">手机号</label>
+                  <input v-model="form.phone" type="text" class="w-full px-3 py-2 border rounded" />
+                </div>
+                <div>
+                  <label class="block text-gray-600 mb-1">部门</label>
+                  <select v-model="form.department" class="w-full px-3 py-2 border rounded">
+                    <option value="">请选择部门</option>
+                    <option v-for="d in departmentList" :key="d" :value="d">{{ d }}</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-gray-600 mb-1">岗位</label>
+                  <input v-model="form.position" type="text" class="w-full px-3 py-2 border rounded" />
+                </div>
+                <div>
+                  <label class="block text-gray-600 mb-1">邮箱</label>
+                  <input v-model="form.email" type="email" class="w-full px-3 py-2 border rounded" />
+                </div>
+                <div>
+                  <label class="block text-gray-600 mb-1">用户性别</label>
+                  <select v-model="form.gender" class="w-full px-3 py-2 border rounded">
+                    <option value="">请选择</option>
+                    <option value="男">男</option>
+                    <option value="女">女</option>
+                  </select>
+                </div>
               </div>
-              <div>
-                <label class="block text-gray-600 mb-1">用户名称</label>
-                <input v-model="form.username" type="text" class="w-full px-3 py-2 border rounded" required />
+              <div class="mb-4">
+                <label class="block text-gray-600 mb-1">备注</label>
+                <textarea v-model="form.remark" class="w-full px-3 py-2 border rounded" maxlength="512" placeholder="请输入内容" />
               </div>
-              <div>
-                <label class="block text-gray-600 mb-1">部门</label>
-                <input v-model="form.department" type="text" class="w-full px-3 py-2 border rounded" required />
+              <div class="flex justify-end gap-4">
+                <button type="button" class="px-6 py-2 rounded bg-gray-200 text-gray-700 hover:bg-gray-300" @click="closeForm">取消</button>
+                <button type="submit" class="px-6 py-2 rounded bg-blue-600 text-white hover:bg-blue-700">确定</button>
               </div>
-              <div>
-                <label class="block text-gray-600 mb-1">手机号</label>
-                <input v-model="form.phone" type="text" class="w-full px-3 py-2 border rounded" required />
-              </div>
-              <div>
-                <label class="block text-gray-600 mb-1">状态</label>
-                <select v-model="form.status" class="w-full px-3 py-2 border rounded">
-                  <option value="启用">启用</option>
-                  <option value="禁用">禁用</option>
-                </select>
-              </div>
-              <div>
-                <label class="block text-gray-600 mb-1">创建时间</label>
-                <input v-model="form.createdAt" type="datetime-local" class="w-full px-3 py-2 border rounded" required />
-              </div>
-            </div>
+            </form>
+          </div>
+        </div>
+        <!-- 删除确认弹窗 -->
+        <div v-if="showDeleteConfirm" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-30 z-50">
+          <div class="bg-white rounded-xl shadow-xl p-8 w-full max-w-sm relative">
+            <div class="text-lg mb-6">确定要删除用户 <span class="font-bold text-red-600">{{ deleteTarget?.nickname }}</span> 吗？</div>
             <div class="flex justify-end gap-4">
-              <button type="button" class="px-6 py-2 rounded bg-gray-200 text-gray-700 hover:bg-gray-300" @click="closeForm">取消</button>
-              <button type="submit" class="px-6 py-2 rounded bg-blue-600 text-white hover:bg-blue-700">确定</button>
+              <button class="px-6 py-2 rounded bg-gray-200 text-gray-700 hover:bg-gray-300" @click="showDeleteConfirm=false">取消</button>
+              <button class="px-6 py-2 rounded bg-red-600 text-white hover:bg-red-700" @click="deleteUserConfirm">删除</button>
             </div>
-          </form>
-        </div>
-      </div>
-      <!-- 删除确认弹窗 -->
-      <div v-if="showDeleteConfirm" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-30 z-50">
-        <div class="bg-white rounded-xl shadow-xl p-8 w-full max-w-sm relative">
-          <div class="text-lg mb-6">确定要删除用户 <span class="font-bold text-red-600">{{ deleteTarget?.nickname }}</span> 吗？</div>
-          <div class="flex justify-end gap-4">
-            <button class="px-6 py-2 rounded bg-gray-200 text-gray-700 hover:bg-gray-300" @click="showDeleteConfirm=false">取消</button>
-            <button class="px-6 py-2 rounded bg-red-600 text-white hover:bg-red-700" @click="deleteUser">删除</button>
           </div>
         </div>
       </div>
-    </section>
+    </div>
   </div>
 </template>
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import axios from 'axios'
+import { fetchUsers, addUser, updateUser, deleteUser } from '@/api.js'
+// 组织树静态示例
+const orgTree = ref([
+  { id: 1, name: '武汉总部', children: [
+    { id: 2, name: '武汉总部' },
+    { id: 3, name: '长沙分点' },
+    { id: 4, name: '市场部门' },
+    { id: 5, name: '财务部门' },
+  ]},
+  { id: 6, name: '新部门', children: [
+    { id: 7, name: '测试部门' },
+    { id: 8, name: '测试部门2' },
+  ]}
+])
+const selectedOrg = ref(null)
 const allUsers = ref([])
-const orgSearch = ref('')
-const selectedOrg = ref('')
 const searchNickname = ref('')
+const searchUsername = ref('')
 const searchPhone = ref('')
 const searchStatus = ref('')
-const searchDate = ref('')
+const searchDepartment = ref('')
 const page = ref(1)
 const pageSize = 10
 const showAddForm = ref(false)
 const showEditForm = ref(false)
 const showDeleteConfirm = ref(false)
 const deleteTarget = ref(null)
-const form = ref({ id: null, nickname: '', username: '', department: '', phone: '', status: '启用', createdAt: '' })
-
+const form = ref({ id: null, nickname: '', username: '', password: '', phone: '', department: '', position: '', email: '', gender: '', remark: '', status: '启用' })
+const departmentList = ['武汉总部','长沙分点','市场部门','财务部门','测试部门','测试部门2']
 // 获取用户列表
-async function fetchUsers() {
+async function fetchUsersData() {
   try {
-    const res = await axios.get('/api/user/list')
+    const res = await fetchUsers()
     allUsers.value = res.data.users || []
   } catch (e) {
     allUsers.value = []
   }
 }
 onMounted(() => {
-  fetchUsers()
+  fetchUsersData()
 })
 const filteredUsers = computed(() => {
   return allUsers.value.filter(u => {
     return (
-      (!selectedOrg.value || u.department.includes(selectedOrg.value)) &&
       (!searchNickname.value || u.nickname.includes(searchNickname.value)) &&
+      (!searchUsername.value || u.username.includes(searchUsername.value)) &&
       (!searchPhone.value || u.phone.includes(searchPhone.value)) &&
       (!searchStatus.value || u.status === searchStatus.value) &&
-      (!searchDate.value || u.createdAt.startsWith(searchDate.value))
+      (!searchDepartment.value || u.department === searchDepartment.value) &&
+      (!selectedOrg.value || u.department === selectedOrg.value.name)
     )
   })
 })
@@ -191,68 +212,65 @@ const pagedUsers = computed(() => {
   const start = (page.value - 1) * pageSize
   return filteredUsers.value.slice(start, start + pageSize)
 })
-function selectOrg(org) {
-  selectedOrg.value = org
-  page.value = 1
-}
 function filterUsers() {
   page.value = 1
 }
 function resetFilters() {
   searchNickname.value = ''
+  searchUsername.value = ''
   searchPhone.value = ''
   searchStatus.value = ''
-  searchDate.value = ''
-  selectedOrg.value = ''
+  searchDepartment.value = ''
+  page.value = 1
+}
+function selectOrg(org) {
+  selectedOrg.value = org
   page.value = 1
 }
 function closeForm() {
   showAddForm.value = false
   showEditForm.value = false
-  form.value = { id: null, nickname: '', username: '', department: '', phone: '', status: '启用', createdAt: '' }
+  form.value = { id: null, nickname: '', username: '', password: '', phone: '', department: '', position: '', email: '', gender: '', remark: '', status: '启用' }
 }
-// 新增用户
-async function addUser() {
+async function addUserData() {
   try {
-    await axios.post('/api/user/create', form.value)
-    await fetchUsers()
-    showAddForm.value = false
+    await addUser(form.value)
     closeForm()
-    alert('新增用户成功')
+    await fetchUsersData()
+    alert('用户创建成功')
   } catch (err) {
-    alert('新增用户失败')
+    alert('用户创建失败')
   }
 }
-// 编辑用户
-async function updateUser() {
+async function updateUserData() {
   try {
-    await axios.put(`/api/user/${form.value.id}`, form.value)
-    await fetchUsers()
-    showEditForm.value = false
+    await updateUser(form.value.id, form.value)
     closeForm()
-    alert('编辑用户成功')
+    await fetchUsersData()
+    alert('用户更新成功')
   } catch (err) {
-    alert('编辑用户失败')
+    alert('用户更新失败')
   }
 }
 function editUser(user) {
-  form.value = { ...user }
+  form.value = { ...user, password: '' }
   showEditForm.value = true
 }
-// 删除用户
-async function deleteUser() {
-  if (!deleteTarget.value) return
-  try {
-    await axios.delete(`/api/user/${deleteTarget.value.id}`)
-    await fetchUsers()
-    showDeleteConfirm.value = false
-    deleteTarget.value = null
-  } catch (err) {
-    alert('删除失败')
-  }
+function showDetail(user) {
+  alert('用户详情：' + user.nickname)
 }
 function confirmDelete(user) {
   deleteTarget.value = user
   showDeleteConfirm.value = true
+}
+async function deleteUserConfirm() {
+  try {
+    await deleteUser(deleteTarget.value.id)
+    showDeleteConfirm.value = false
+    await fetchUsersData()
+    alert('用户删除成功')
+  } catch (err) {
+    alert('用户删除失败')
+  }
 }
 </script> 
