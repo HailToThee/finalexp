@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   app:
     build:
@@ -7,19 +9,20 @@ services:
       - "8000:8000"
     volumes:
       - ./backend:/app
-      - /var/run/docker.sock:/var/run/docker.sock # <--- 关键的修正！
-    depends_on:
-      - db
+      - sqlite_data:/app/data  # SQLite数据文件存储
     env_file:
       - backend/.env
-  db:
-    image: postgres:13
-    environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: modelsafety_db
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+
+  # 数据库初始化服务
+  init_db_service:
+    build:
+      context: backend
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - ./backend:/app
+      - sqlite_data:/app/data  # 共享SQLite数据文件
+    command: ["python", "init_db.py"]
+
   frontend:
     build:
       context: frontend
@@ -27,11 +30,11 @@ services:
     ports:
       - "5173:5173"
     volumes:
-      - ./frontend:/app # 如果前端也需要实时文件同步，可以取消注释
+      - ./frontend:/app
       - /app/node_modules
     depends_on:
       - app
-    command: npm run dev -- --host 0.0.0.0
+    command: ["sh", "-c", "rm -rf node_modules/.vite && npm run dev -- --host 0.0.0.0"]
 
 volumes:
-  postgres_data:
+  sqlite_data:  # SQLite数据卷

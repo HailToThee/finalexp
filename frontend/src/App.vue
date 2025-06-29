@@ -7,7 +7,13 @@
         AI模型安全评估平台
       </div>
       <div class="flex-1"></div>
-      <!-- 右侧可预留用户信息/设置等 -->
+      <!-- 右侧用户信息和退出按钮 -->
+      <div v-if="token" class="flex items-center space-x-4">
+        <span class="text-white">{{ username }}</span>
+        <button @click="logout" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md transition">
+          退出登录
+        </button>
+      </div>
     </header>
     <div class="flex">
       <!-- 侧边栏 -->
@@ -28,6 +34,9 @@
               <router-link to="/algorithms" class="block py-3 px-6 rounded-xl text-lg font-medium transition hover:bg-blue-600 hover:text-white text-blue-100" active-class="bg-white text-blue-800 font-bold shadow">算法管理</router-link>
             </li>
             <li>
+              <router-link to="/adversarial" class="block py-3 px-6 rounded-xl text-lg font-medium transition hover:bg-blue-600 hover:text-white text-blue-100" active-class="bg-white text-blue-800 font-bold shadow">对抗样本生成</router-link>
+            </li>
+            <li>
               <router-link to="/file" class="block py-3 px-6 rounded-xl text-lg font-medium transition hover:bg-blue-600 hover:text-white text-blue-100" active-class="bg-white text-blue-800 font-bold shadow">文件管理</router-link>
             </li>
             <li>
@@ -35,6 +44,9 @@
             </li>
             <li>
               <router-link to="/inference" class="block py-3 px-6 rounded-xl text-lg font-medium transition hover:bg-blue-600 hover:text-white text-blue-100" active-class="bg-white text-blue-800 font-bold shadow">推理服务</router-link>
+            </li>
+            <li>
+              <router-link to="/images" class="block py-3 px-6 rounded-xl text-lg font-medium transition hover:bg-blue-600 hover:text-white text-blue-100" active-class="bg-white text-blue-800 font-bold shadow">镜像管理</router-link>
             </li>
           </ul>
         </nav>
@@ -47,16 +59,27 @@
   </div>
 </template>
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useAuthStore } from './store/index'
+
 const router = useRouter()
+const store = useAuthStore()
 const token = ref(localStorage.getItem('token'))
 const username = computed(() => {
-  // 可根据后端返回的用户信息调整
-  return token.value ? '已登录' : ''
+  return token.value ? '已登录用户' : ''
 })
+
+onMounted(() => {
+  // 检查token是否有效
+  if (token.value) {
+    // 可以在这里验证token有效性
+    console.log('Token found:', token.value)
+  }
+})
+
 function logout() {
-  localStorage.removeItem('token')
+  store.logout()
   token.value = null
   router.push('/login')
 }

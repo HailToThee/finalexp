@@ -79,7 +79,7 @@
           <div class="bg-white rounded-xl shadow-xl p-8 w-full max-w-xl relative">
             <button class="absolute top-2 right-2 text-gray-400 hover:text-gray-600 text-2xl" @click="closeForm">×</button>
             <h2 class="text-2xl font-bold mb-6 text-center">{{ showAddForm ? '新建服务' : '编辑服务' }}</h2>
-            <form @submit.prevent="showAddForm ? addService() : updateService()">
+            <form @submit.prevent="showAddForm ? addServiceData() : updateService()">
               <div class="grid grid-cols-2 gap-4 mb-4">
                 <div>
                   <label class="block text-gray-600 mb-1">服务名</label>
@@ -134,7 +134,7 @@
 </template>
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import axios from 'axios'
+import { fetchServices, addService, deleteService, getInferenceResult } from '@/api.js'
 // 服务分组树结构可本地静态
 const serviceGroups = ref([
   { id: 1, name: '全部服务', children: [
@@ -158,17 +158,19 @@ const deleteTarget = ref(null)
 const form = ref({ id: null, name: '', type: '', status: '', creator: '', createdAt: '' })
 
 // 获取服务列表
-async function fetchServices() {
+async function fetchServicesData() {
   try {
-    const res = await axios.get('/api/inference/list')
+    const res = await fetchServices()
     allServices.value = res.data.services || []
   } catch (e) {
     allServices.value = []
   }
 }
+
 onMounted(() => {
-  fetchServices()
+  fetchServicesData()
 })
+
 const filteredServices = computed(() => {
   return allServices.value.filter(s => {
     return (
@@ -205,11 +207,11 @@ function closeForm() {
   form.value = { id: null, name: '', type: '', status: '', creator: '', createdAt: '' }
 }
 // 新建服务
-async function addService() {
+async function addServiceData() {
   // 这里只做简单示例，实际可根据表单内容构造请求体
   try {
-    await axios.post('/api/inference/deploy', form.value)
-    await fetchServices()
+    await addService(form.value)
+    await fetchServicesData()
     showAddForm.value = false
     closeForm()
     alert('新建服务成功')
@@ -221,8 +223,8 @@ async function addService() {
 async function deleteServiceConfirm() {
   if (!deleteTarget.value) return
   try {
-    await axios.delete(`/api/inference/${deleteTarget.value.id}`)
-    await fetchServices()
+    await deleteService(deleteTarget.value.id)
+    await fetchServicesData()
     showDeleteConfirm.value = false
     deleteTarget.value = null
   } catch (err) {
@@ -243,5 +245,16 @@ function updateService() {
 }
 function showDetail(service) {
   alert('服务详情：' + service.name)
+}
+// 获取推理结果
+async function showResult(service) {
+  try {
+    const res = await getInferenceResult(service.id)
+    // 处理推理结果
+    console.log('推理结果:', res.data)
+    alert('推理结果获取成功')
+  } catch (err) {
+    alert('获取推理结果失败')
+  }
 }
 </script> 

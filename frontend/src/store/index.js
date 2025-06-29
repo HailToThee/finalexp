@@ -9,11 +9,15 @@ export const useAuthStore = defineStore('auth', {
     actions: {
         async login(username, password) {
             try {
-                const response = await axios.post('/api/auth/token', {
-                    username,
-                    password,
+                const params = new URLSearchParams();
+                params.append('username', username);
+                params.append('password', password);
+                
+                const response = await axios.post('/api/auth/token', params, {
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
                 })
                 this.token = response.data.access_token
+                this.user = response.data.user_info
                 localStorage.setItem('token', this.token)
                 return true
             } catch (error) {
@@ -21,10 +25,18 @@ export const useAuthStore = defineStore('auth', {
                 return false
             }
         },
-        async register(username, password) {
+        async register(username, password, nickname, department, phone, email, gender, position, remark) {
             try {
-                const response = await axios.post('/api/auth/register', null, {
-                    params: { username, password }
+                const response = await axios.post('/api/auth/register', {
+                    username,
+                    password,
+                    nickname,
+                    department,
+                    phone,
+                    email,
+                    gender,
+                    position,
+                    remark
                 })
                 return { success: true, msg: response.data.msg }
             } catch (error) {

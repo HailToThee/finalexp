@@ -26,9 +26,9 @@ COPY ./requirements.txt .
 
 # 5. 安装 Python 依赖
 #    因为上面设置了环境变量，这里不需要再加 -i 参数
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install -r requirements.txt
 
 # 6. 最后再复制应用程序代码
 COPY . .
-
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+

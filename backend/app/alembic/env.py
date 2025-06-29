@@ -4,9 +4,9 @@ from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 
 from alembic import context
-from app.models import file,user,model_file,org,algorithm
+import app.models
 from app.db import Base
-
+import os
 
 
 # this is the Alembic Config object, which provides
@@ -29,6 +29,8 @@ target_metadata = Base.metadata
 # my_important_option = config.get_main_option("my_important_option")
 # ... etc.
 
+# 确保数据目录存在
+os.makedirs("/app/data", exist_ok=True)
 
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode.
@@ -61,8 +63,12 @@ def run_migrations_online() -> None:
     and associate a connection with the context.
 
     """
+    # 获取配置并添加SQLite特定参数
+    section = config.get_section(config.config_ini_section, {})
+    section["sqlalchemy.connect_args"] = '{"check_same_thread": false}'
+    
     connectable = engine_from_config(
-        config.get_section(config.config_ini_section, {}),
+        section,
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )
